@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>植睫毛教本 P30–P41</title>
+<style>
+  :root { --bg:#e9edf2; --fg:#1d2733; --accent:#0a6fb8; --btn:#fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161b22; --fg:#e6edf3; --accent:#58a6ff; --btn:#222a35; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center;
+    padding: env(safe-area-inset-top) 8px env(safe-area-inset-bottom); }
+  #stage { flex: 1; width: 100%; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 0; }
+  #book { box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .page { background: #fff; }
+  .page img { width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; }
+  #bar { display: flex; gap: 10px; align-items: center; padding: 10px 0 12px; }
+  button { background: var(--btn); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 8px 16px; font-size: 16px; cursor: pointer; }
+  button:active { opacity: .6; }
+  #info { min-width: 90px; text-align: center; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="book"></div></div>
+<div id="bar">
+  <button id="prev" aria-label="上一頁">‹ 上一頁</button>
+  <span id="info"></span>
+  <button id="next" aria-label="下一頁">下一頁 ›</button>
+  <button id="full" aria-label="全螢幕">全螢幕</button>
+</div>
+
+<script src="page-flip.browser.js"></script>
+<script>
+  // 頁碼範圍:對應原書 P30–P41;圖檔放在 pages/ 資料夾
+  var FIRST = 30, LAST = 41;
+  var W = 995, H = 1405; // 單頁像素比例
+
+  var book = document.getElementById('book');
+  for (var n = FIRST; n <= LAST; n++) {
+    var d = document.createElement('div');
+    d.className = 'page';
+    var img = document.createElement('img');
+    img.src = 'pages/p' + n + '.jpg';
+    img.alt = '第 ' + n + ' 頁';
+    img.draggable = false;
+    d.appendChild(img);
+    book.appendChild(d);
+  }
+
+  var stage = document.getElementById('stage');
+  function fit() {
+    // 依可用空間算出單頁大小,保持原比例
+    var sw = stage.clientWidth, sh = stage.clientHeight;
+    var spread = sw > sh * 1.1;            // 橫向顯示雙頁,直向顯示單頁
+    var pageH = Math.min(sh, (spread ? sw / 2 : sw) * H / W);
+    return { w: Math.floor(pageH * W / H), h: Math.floor(pageH) };
+  }
+  var s = fit();
+
+  var flip = new St.PageFlip(book, {
+    width: s.w, height: s.h, size: 'fixed',
+    showCover: false,          // 第一頁(P30)與第二頁(P31)並排,和原書跨頁一致
+    usePortrait: true, mobileScrollSupport: false,
+    maxShadowOpacity: 0.4, flippingTime: 700
+  });
+  flip.loadFromHTML(document.querySelectorAll('.page'));
+  var start = parseInt((location.hash || '').replace('#p', ''), 10);
+  if (start >= FIRST && start <= LAST) flip.turnToPage(start - FIRST);
+
+  var info = document.getElementById('info');
+  function update() {
+    var i = flip.getCurrentPageIndex();
+    var portrait = flip.getOrientation() === 'portrait';
+    var a = FIRST + i;
+    info.textContent = (portrait || a + 1 > LAST) ? ('P' + a) : ('P' + a + '–P' + (a + 1));
+  }
+  flip.on('flip', function () { history.replaceState(null, '', '#p' + (FIRST + flip.getCurrentPageIndex())); update(); });
+  flip.on('changeOrientation', update);
+  update();
+
+  document.getElementById('prev').onclick = function () { flip.flipPrev(); };
+  document.getElementById('next').onclick = function () { flip.flipNext(); };
+  document.getElementById('full').onclick = function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+  };
+  var rt;
+  window.addEventListener('resize', function () {
+    clearTimeout(rt);
+    rt = setTimeout(function () { location.reload(); }, 400);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') flip.flipPrev();
+    if (e.key === 'ArrowRight') flip.flipNext();
+  });
+</script>
+</body>
+</html>
